@@ -1,0 +1,14 @@
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python>=4.8.0
+pillow>=9.0.0
+numpy>=1.24.0
+boto3>=1.28.0
+supervision>=0.16.0
+huggingface-hub>=0.20.0
+
+# Note: This script uses SAM3 repository directly
+# Clone the repository: git clone https://github.com/facebookresearch/sam3.git
+# Install dependencies from SAM3: cd sam3 && pip install -e .
+# Set Hugging Face token: export HF_TOKEN=your_token_here
+
