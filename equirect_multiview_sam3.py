@@ -1345,18 +1345,11 @@ def main():
                         eq_mask = mask_to_equirect(mask, inv_x, inv_y, valid)
                         if eq_mask is None:
                             continue
-                        # An object mask touching its source view's own border
-                        # is cut off by that view's frustum, not by the object's
-                        # real extent - the rest of it lives in whatever view is
-                        # next door. Flag it so we know to go get that part too.
-                        clipped = bool(mask[0, :].any() or mask[-1, :].any()
-                                       or mask[:, 0].any() or mask[:, -1].any())
                         found.append({
                             'mask': eq_mask,
                             'score': score,
                             'phrase': phrase,
                             'view': view_tag,
-                            'clipped': clipped,
                         })
                 stage_totals['render'] += t1 - t0
                 stage_totals['infer'] += t2 - t1
@@ -1366,20 +1359,14 @@ def main():
             detections = run_views(views, args.box_threshold, args.text_threshold)
             detections = apply_concept_thresholds(detections, concept_thresholds)
 
-            # Only frames that came back empty - or whose only hits are cut off
-            # by their own view's edge - pay for the extra, seam-offset views.
-            # On a set where most frames already detect cleanly, this still
-            # costs almost nothing.
+            # Only frames that came back empty pay for the extra views. On a set
+            # where most frames already detect, this costs almost nothing.
             rescued = False
-            needs_rescue = not detections or any(d.get('clipped') for d in detections)
-            if needs_rescue and not args.no_rescue:
-                rescue_detections = run_views(RESCUE_VIEWS, args.rescue_box_threshold,
-                                              args.rescue_text_threshold)
-                rescue_detections = apply_concept_thresholds(rescue_detections, concept_thresholds)
-                rescued = bool(rescue_detections)
-                # Add to, rather than replace, an already-partial detection -
-                # dedupe() below merges the fragments back into one object.
-                detections = detections + rescue_detections
+            if not detections and not args.no_rescue:
+                detections = run_views(RESCUE_VIEWS, args.rescue_box_threshold,
+                                       args.rescue_text_threshold)
+                detections = apply_concept_thresholds(detections, concept_thresholds)
+                rescued = bool(detections)
 
             t_post = time.time()
             detections = dedupe(detections, args.dedupe_iou, args.merge_size_ratio, weights)
